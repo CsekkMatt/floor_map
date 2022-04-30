@@ -1,0 +1,108 @@
+//TODO customizable image tile
+  List<Image> _tiledImage(int layer, List<int> tiles) {
+    imglib.Image? image = imglib.decodeImage(tiles);
+    int x = 0, y = 0;
+    int xlength = (image!.width / layer).round();
+    int ylength = (image.height / layer).round();
+    int row = layer;
+    int col = layer;
+    var imageMatrix = List.generate(
+        row, (i) => List.filled(col, imglib.Image, growable: false),
+        growable: false);
+    List<imglib.Image> parts = [];
+    for (int i = 0; i < layer; i++) {
+      for (int j = 0; j < layer; j++) {
+        parts.add(imglib.copyCrop(image, x, y, xlength, ylength));
+        imageMatrix[i][j] =
+            imglib.copyCrop(image, x, y, xlength, ylength) as Type;
+        y += ylength;
+      }
+      y = 0;
+      x += xlength;
+    }
+
+    var resultMatrix = List.generate(
+        row, (i) => List.filled(col, imglib.Image, growable: false),
+        growable: false);
+    List<Image> result = [];
+    for (int i = 0; i < layer; i++) {
+      for (int j = 0; j < layer; j++) {
+        resultMatrix[i][j] = imageMatrix[i][j];
+      }
+    }
+    for (var img in parts) {
+      Image tempImage = Image.memory(Uint8List.fromList(imglib.encodeJpg(img)));
+      Uint8List.fromList(imglib.encodeJpg(image));
+
+      result.add(tempImage);
+    }
+    return result;
+  }
+
+    //only for test....
+  Image? _imageBasedOnCoordinate(int x, int y, int z, List<int> image) {
+    print('x ${x} y ${y} z ${z}  ss');
+    if (z > 1) {
+      return mainImage;
+    }
+    if (z == 0) {
+      return mainImage;
+    }
+    //TODO have to find a way to decide
+    //dynamically the picture/image
+    //based on x y z
+    //based on the Z we can assume how much tile we'll have
+    //so like -> z == 1 we'll have 4 tile. but
+    // we won't know x == 0 and y == 0 represents the
+    // so have to find a solution for
+    //
+
+    //based on Z
+    //find the tiles
+    // in matrix
+    List<Image> images = _tiledImage(z + 1, image);
+    if (z == 1) {
+      if (x == 0 && y == 0) {
+        return images[0];
+      } else if (x == 0 && y == 1) {
+        return images[1];
+      } else if (x == 1 && y == 0) {
+        return images[2];
+      } else if (x == 1 && y == 1) {
+        return images[3];
+      }
+    }
+    return null;
+  }
+
+   Future<void> createTilesFromImage(List<int> tiles) async {
+    imglib.Image? image = imglib.decodeImage(tiles);
+    int layer = 4;
+    int x = 0, y = 0;
+    int xlength = (image!.width / layer).round();
+    int ylength = (image.height / layer).round();
+    List<imglib.Image> parts = [];
+    for (int i = 0; i < layer; i++) {
+      for (int j = 0; j < layer; j++) {
+        parts.add(imglib.copyCrop(image, x, y, xlength, ylength));
+        y += ylength;
+      }
+      y = 0;
+      x += xlength;
+    }
+    List<Image> result = [];
+
+    int tileNumber = 0;
+    Directory dir = await getApplicationDocumentsDirectory();
+    for (var img in parts) {
+      Image tempImage = Image.memory(Uint8List.fromList(imglib.encodeJpg(img)));
+      String tempDirPath = dir.path;
+      print(tempDirPath);
+      var imgBytes = Uint8List.fromList(imglib.encodeJpg(img));
+      result.add(tempImage);
+      File file = await File('$tempDirPath/$tileNumber.jpg').create();
+      tileNumber++;
+      file.writeAsBytesSync(imgBytes);
+    }
+    dir.list(recursive: false).map((event) => print(event.path));
+  }
